@@ -88,6 +88,21 @@ class PxpayModuleTest < Test::Unit::TestCase
     end
   end
 
+  def test_enable_add_bill_card
+    Pxpay::Helper.any_instance.expects(:ssl_post).with do |_, request|
+      request.include?("<MerchantReference>44</MerchantReference>") &&
+        request.include?("<PxPayUserId>#{@username}</PxPayUserId>") &&
+        request.include?("<PxPayKey>#{@key}</PxPayKey>") &&
+        request.include?("<TxnType>Purchase</TxnType>") &&
+        request.include?("<AmountInput>157.00</AmountInput>") &&
+        request.include?("<EnableAddBillCard>1</EnableAddBillCard>") &&
+        request.include?("<UrlSuccess>http://example.com/pxpay/return_url</UrlSuccess>") &&
+        request.include?("<UrlFail>http://example.com/pxpay/return_url</UrlFail>")
+    end.returns(valid_response)
+
+    payment_service_for('44', @username, @service_options.merge(enable_add_bill_card: '1')) {}
+  end
+
   private
 
   def valid_response
