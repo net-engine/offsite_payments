@@ -100,7 +100,7 @@ class PxpayModuleTest < Test::Unit::TestCase
         request.include?("<UrlFail>http://example.com/pxpay/return_url</UrlFail>")
     end.returns(valid_response)
 
-    payment_service_for('44', @username, @service_options.merge(enable_add_bill_card: '1')) {}
+    payment_service_for('44', @username, @service_options.merge(token_billing: true)) {}
   end
 
   private
