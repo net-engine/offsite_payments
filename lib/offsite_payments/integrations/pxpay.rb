@@ -45,7 +45,7 @@ module OffsitePayments #:nodoc:
         end
 
         def credential_based_url
-          raw_response = ssl_post(@options.fetch(:token_url, PxPay.token_url), generate_request)
+          raw_response = ssl_post(@options.fetch(:token_url, Pxpay.token_url), generate_request)
           result = parse_response(raw_response)
 
           raise ActionViewHelperError, "error - failed to get token - message was #{result[:redirect]}" unless result[:valid] == "1"
@@ -241,7 +241,7 @@ module OffsitePayments #:nodoc:
           root.add_element('PxPayKey').text = @options[:credential2]
           root.add_element('Response').text = encrypted_result
 
-          @raw = ssl_post(@options.fetch(:token_url, PxPay.token_url), request_xml.to_s)
+          @raw = ssl_post(@options.fetch(:token_url, Pxpay.token_url), request_xml.to_s)
 
           response_xml = REXML::Document.new(@raw)
           root = REXML::XPath.first(response_xml)
