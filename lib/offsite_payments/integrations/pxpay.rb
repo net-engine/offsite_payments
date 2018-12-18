@@ -18,7 +18,7 @@ module OffsitePayments #:nodoc:
       class Helper < OffsitePayments::Helper
         include ActiveUtils::PostsData
 
-        attr_reader :token_parameters, :redirect_parameters
+        attr_reader :token_parameters, :redirect_parameters, :token_url
 
         def initialize(order, account, options = {})
           @token_parameters = {
@@ -37,6 +37,7 @@ module OffsitePayments #:nodoc:
             'UrlFail'           => options[:return_url]
           }
           @redirect_parameters = {}
+          @token_url = options.fetch(:token_url, Pxpay.token_url)
 
           super
 
@@ -45,7 +46,7 @@ module OffsitePayments #:nodoc:
         end
 
         def credential_based_url
-          raw_response = ssl_post(@options.fetch(:token_url, Pxpay.token_url), generate_request)
+          raw_response = ssl_post(token_url, generate_request)
           result = parse_response(raw_response)
 
           raise ActionViewHelperError, "error - failed to get token - message was #{result[:redirect]}" unless result[:valid] == "1"
