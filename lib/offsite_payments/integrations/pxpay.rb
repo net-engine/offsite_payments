@@ -45,13 +45,19 @@ module OffsitePayments #:nodoc:
           raise ArgumentError, "error - must specify cancel_return_url" if token_parameters['UrlFail'].blank?
         end
 
-        def credential_based_url
+        def redirect_url
           raw_response = ssl_post(token_url, generate_request)
           result = parse_response(raw_response)
 
           raise ActionViewHelperError, "error - failed to get token - message was #{result[:redirect]}" unless result[:valid] == "1"
 
-          url = URI.parse(result[:redirect])
+          result[:redirect]
+        rescue ActiveUtils::ConnectionError
+          raise ActionViewHelperError, "A connection error occurred while contacting the payment gateway. Please try again."
+        end
+
+        def credential_based_url
+          url = URI.parse(redirect_url)
 
           if url.query
             @redirect_parameters = CGI.parse(url.query)
@@ -59,8 +65,6 @@ module OffsitePayments #:nodoc:
           end
 
           url.to_s
-        rescue ActiveUtils::ConnectionError
-          raise ActionViewHelperError, "A connection error occurred while contacting the payment gateway. Please try again."
         end
 
         def form_method
