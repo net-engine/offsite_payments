@@ -18,7 +18,7 @@ module OffsitePayments #:nodoc:
       class Helper < OffsitePayments::Helper
         include ActiveUtils::PostsData
 
-        attr_reader :token_parameters, :redirect_parameters
+        attr_reader :token_parameters, :redirect_parameters, :token_url
 
         def initialize(order, account, options = {})
           @token_parameters = {
@@ -31,12 +31,13 @@ module OffsitePayments #:nodoc:
             'TxnData2'          => options[:custom2],
             'TxnData3'          => options[:custom3],
             'AmountInput'       => "%.2f" % options[:amount].to_f.round(2),
-            'EnableAddBillCard' => '0',
-            'TxnType'           => 'Purchase',
+            'EnableAddBillCard' => options[:token_billing] ? '1' : '0',
+            'TxnType'           => options.fetch(:txn_type, 'Purchase'),
             'UrlSuccess'        => options[:return_url],
             'UrlFail'           => options[:return_url]
           }
           @redirect_parameters = {}
+          @token_url = options.fetch(:token_url, Pxpay.token_url)
 
           super
 
@@ -44,13 +45,19 @@ module OffsitePayments #:nodoc:
           raise ArgumentError, "error - must specify cancel_return_url" if token_parameters['UrlFail'].blank?
         end
 
-        def credential_based_url
-          raw_response = ssl_post(Pxpay.token_url, generate_request)
+        def redirect_url
+          raw_response = ssl_post(token_url, generate_request)
           result = parse_response(raw_response)
 
           raise ActionViewHelperError, "error - failed to get token - message was #{result[:redirect]}" unless result[:valid] == "1"
 
-          url = URI.parse(result[:redirect])
+          result[:redirect]
+        rescue ActiveUtils::ConnectionError
+          raise ActionViewHelperError, "A connection error occurred while contacting the payment gateway. Please try again."
+        end
+
+        def credential_based_url
+          url = URI.parse(redirect_url)
 
           if url.query
             @redirect_parameters = CGI.parse(url.query)
@@ -58,8 +65,6 @@ module OffsitePayments #:nodoc:
           end
 
           url.to_s
-        rescue ActiveUtils::ConnectionError
-          raise ActionViewHelperError, "A connection error occurred while contacting the payment gateway. Please try again."
         end
 
         def form_method
@@ -241,7 +246,7 @@ module OffsitePayments #:nodoc:
           root.add_element('PxPayKey').text = @options[:credential2]
           root.add_element('Response').text = encrypted_result
 
-          @raw = ssl_post(Pxpay.token_url, request_xml.to_s)
+          @raw = ssl_post(@options.fetch(:token_url, Pxpay.token_url), request_xml.to_s)
 
           response_xml = REXML::Document.new(@raw)
           root = REXML::XPath.first(response_xml)
